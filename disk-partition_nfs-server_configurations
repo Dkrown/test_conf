@@ -1,0 +1,130 @@
+How to create disk partitioning using 'parted' command and create NFS (network file system)server on CentOS 8 Stream Server:
+============================================================================================================================
+Disk partition:
+---------------
+Step 1: Identify the disk to be partition using 'lsblk' command
+	From my example:
+				[admin@ns1 ~]$ lsblk
+				NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+				sr0          11:0    1  973M  0 rom  
+				nvme0n1     259:0    0   40G  0 disk 
+				|-nvme0n1p1 259:1    0    1G  0 part /boot
+				`-nvme0n1p2 259:2    0   39G  0 part 
+				 |-cs-root 253:0    0 36.9G  0 lvm  /
+				  `-cs-swap 253:1    0  2.1G  0 lvm  [SWAP]
+				nvme0n2     259:3    0   40G  0 disk
+
+Step 2: After identifying the disk to partition (nvme0n2 from my example above), now run the following
+	commands separately:
+				parted /dev/nvme0n2
+				select /dev/nvme0n2
+				mklabel gpt
+				mkpart primary ext4 0% 50%
+				print
+
+	From my example:	(parted) print
+				Model: NVMe Device (nvme)
+				Disk /dev/nvme0n2: 42.9GB
+				Sector size (logical/physical): 512B/512B
+				Partition Table: gpt
+				Disk Flags: 
+
+				Number  Start   End     Size    File system  Name     Flags
+				1      1049kB  21.5GB  21.5GB  ext4         primary
+
+				NOTE: The disk (dev/nvme0n2) size is 42.9GB and 50% partition created (End: 21.5GB)
+
+Step 3: To created the second partition, run the
+	following commands:
+				mkpart primary ext4 21.5GB 42.9GB
+				print
+				quit
+
+	From my example:	(parted) print                                                            
+				Model: NVMe Device (nvme)
+				Disk /dev/nvme0n2: 42.9GB
+				Sector size (logical/physical): 512B/512B
+				Partition Table: gpt
+				Disk Flags: 
+
+				Number  Start   End     Size    File system  Name     Flags
+				1      1049kB  21.5GB  21.5GB  ext4         primary
+				2      21.5GB  42.9GB  21.5GB  ext4         primary	
+
+From the above examples, we've two separate partitions (nvme0n2p1 and nvme0n2p2) successfully created.
+
+Step 4: Format the partitions using the
+	following commands:
+				mkfs.ext4 /dev/nvme0n2p1  # Format the first partition
+				mkfs.ext4 /dev/nvme0n2p2  # Format the second partition
+
+Step 5: Create the directories as mount points for
+	the partitions:
+				mkdir /mnt/nfs-documents  # Create a directory for the first partition
+				mkdir /mnt/nfs-pictures  # Create a directory for the second partition
+
+Step 6: Mount the partitions to the
+	respective directories:
+				mount /dev/nvme0n2p1 /mnt/nfs-documents  # Mount the first partition
+				mount /dev/nvme0n2p2 /mnt/nfs-pictures  # Mount the second partition
+		
+
+Step 7: You can check/verify those directories were mounted by 
+	running these commands:
+				lsblk
+				df -hT
+
+
+NFS (network file system) server-side:
+--------------------------------------
+Step 1:	Run updates and install nfs package using the
+	following commands:
+				dnf update
+				dnf install nfs-utils
+
+Step 2:	Configure the nfs exports file as like the
+	following sample:
+				open:	nano /etc/exports
+				add:	/mnt/nfs-documents *(rw,sync,no_root_squash)
+				add:	/mnt/nfs-pictures *(rw,sync,no_root_squash)
+				close:	save and exit nano
+
+Step 3:	Start and enable nfs server:
+				systemctl start nfs-server	# Start nfs-server
+				systemctl enable nfs-server	# Enable nfs-server at system boot
+				exportfs -a			# Export the shared directories
+
+Step 4:	Configure firewall to allow nfs traffic with
+	follwoing commands:
+				firewall-cmd --permanent --zone=public --add-service=nfs
+				firewall-cmd --reload
+
+Step 5:	Verify the exported nfs shares using
+	this command:
+				exportfs -v
+
+If all the above steps were followed correctly, you've your NFS server setup without any errors or issues.
+
+
+NFS (network file system) client-side:
+--------------------------------------
+To access the nfs shares (server) from the client machines, you mount the nfs shares as demonstrate below:
+
+Step 1:	Update and install nfs common
+	package as follows:
+				apt/dnf update
+				apt/dnf install nfs-common
+
+Step 2: Create directory(ies):
+				mkdir /mnt/nfs-documents-client
+				mkdir /mnt/nfs-pictures-client
+
+Step 3: Mount the directory(ies):
+				mount -t nfs <nfs-server-ip>:/mnt/nfs-documents /mnt/nfs-documents-client
+				ex: mount -t nfs 10.10.10.250:/mnt/nfs-documents /mnt/nfs-documents-client
+
+				mount -t nfs <nfs-server-ip>:/mnt/nfs-pictures /mnt/nfs-pictures-client
+				ex: mount -t nfs 10.10.10.250:/mnt/nfs-pictures /mnt/nfs-pictures-client
+
+
+Here, you've it all, from disk partitioning to installing and configuring nfs-server and accessing it from the client machines.
