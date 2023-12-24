@@ -126,5 +126,14 @@ Step 3: Mount the directory(ies):
 				mount -t nfs <nfs-server-ip>:/mnt/nfs-pictures /mnt/nfs-pictures-client
 				ex: mount -t nfs 10.10.10.250:/mnt/nfs-pictures /mnt/nfs-pictures-client
 
+Step 4: Optional. To ensure that NFS shares are mounted automatically
+	every time the client system boots up,
+	you can add entries into the
+	/etc/fstab file as follows:
+				open:	nano /etc/fstab
+				add:	<NFS_Server_IP>:/path/to/shared/directory /mnt/local_mount_point nfs defaults 0 0
+				ex:	10.10.20.50:/mnt/nfs-pictures /mnt/nfs-pictures-client nfs defaults 0 0
+				close:	save and exit nano
+
 
 Here, you've it all, from disk partitioning to installing and configuring nfs-server and accessing it from the client machines.
