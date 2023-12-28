@@ -135,5 +135,16 @@ Step 4: Optional. To ensure that NFS shares are mounted automatically
 				ex:	10.10.20.50:/mnt/nfs-pictures /mnt/nfs-pictures-client nfs defaults 0 0
 				close:	save and exit nano
 
+Extras:
+# Create a new file in the nfs-pictures directory
+echo "Hello, this is a test file." | sudo tee /mnt/nfs-pictures-client/test_file.txt
+
+# Create another file in the nfs-documents directory
+echo "This is another test file." | sudo tee /mnt/nfs-documents-client/another_file.txt
+
+# Verify the files have been written successfully
+ls -l /mnt/nfs-pictures-client
+ls -l /mnt/nfs-documents-client
+
 
 Here, you've it all, from disk partitioning to installing and configuring nfs-server and accessing it from the client machines.
